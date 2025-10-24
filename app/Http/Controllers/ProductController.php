@@ -3,71 +3,19 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Product;
 
 class ProductController extends Controller
 {
-    private $perfumes = [
-    [
-        'id' => 1,
-        'name' => 'Eternal Blossom',
-        'price' => 120,
-        'category' => 'Women',
-        'image' => 'perfume.png'
-    ],
-    [
-        'id' => 2,
-        'name' => 'Midnight Oud',
-        'price' => 150,
-        'category' => 'Men',
-        'image' => 'perfume1.png'
-    ],
-    [
-        'id' => 3,
-        'name' => 'Citrus Breeze',
-        'price' => 95,
-        'category' => 'Unisex',
-        'image' => 'perfume2.png'
-    ],
-    [
-        'id' => 4,
-        'name' => 'Amber Essence',
-        'price' => 140,
-        'category' => 'Men',
-        'image' => 'perfume3.png'
-    ],
-    [
-        'id' => 5,
-        'name' => 'Velvet Rose',
-        'price' => 110,
-        'category' => 'Women',
-        'image' => 'perfume4.png'
-    ],
-    [
-        'id' => 6,
-        'name' => 'Aqua Noir',
-        'price' => 130,
-        'category' => 'Unisex',
-        'image' => 'perfume5.png'
-    ],
-    [
-        'id' => 7,
-        'name' => 'Golden Sand',
-        'price' => 125,
-        'category' => 'Men',
-        'image' => 'perfume6.png'
-    ],
-    [
-        'id' => 8,
-        'name' => 'Mystic Musk',
-        'price' => 160,
-        'category' => 'Unisex',
-        'image' => 'perfume7.png'
-    ],
-  ];
-    function index()
+    function index(Request $request)
     {
         // return "index works";
-        return view('product.index', ["perfumes" => $this->perfumes]);
+        $search = $request->input('search');
+        $products = Product::when($search, function($query, $search){
+            $query->where('name', 'like', "%{$search}%")
+                   ->orWhere('category', 'like', "%{$search}%");
+        })->paginate(8);
+        return view('product.index', compact('products', 'search'));
     }
 
      function create()
@@ -78,18 +26,81 @@ class ProductController extends Controller
 
     function store(Request $request)
     {
-        return view('product.new', ['data' => $request->all()]);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|string|max:100',
+            'image' => 'nullable|image|max:2048',
+            'stock_quantity' => 'required|integer|min:0',
+        ]);
+
+        if($request->hasFile('image'))
+        {
+            $filename = time() . '_' . $request->file('image')->getClientOriginalName();
+            $request->file('image')->move(public_path('images'), $filename);
+
+            // Save only the filename in DB
+            $validated['image'] = $filename;
+        }
+        $product = Product::create($validated);
+
+        return redirect()->route('products.show', $product->id);
     }
 
      function show($id)
     {
         // return "show works";
-       $product = collect($this->perfumes)->firstWhere('id', $id);
+       $product = Product::findorFail($id);
+       return view('product.show', compact('product'));
+    }
 
-        if (!$product) {
-            abort(404, 'Product not found');
+    function edit(Product $product)
+    {
+        return view('product.edit', compact('product'));
+    }
+
+    function update(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'price' => 'required|numeric|min:0',
+        'category' => 'required|string|max:100',
+        'image' => 'nullable|image|max:2048',
+        'stock_quantity' => 'required|integer|min:0',
+        ]);
+
+        if ($request->hasFile('image')) 
+        {
+            // delete the old image
+            if ($product->image && file_exists(public_path('images/' . $product->image))) 
+                {
+                unlink(public_path('images/' . $product->image));
+            }
+
+            // Save the new image
+            $imageName = time() . '.' . $request->image->extension();
+            $request->image->move(public_path('images/'), $imageName);
+            $validated['image'] = $imageName;
         }
 
-        return view('product.show', ['perfume' => $product]);
+        $product->update($validated);
+
+        return redirect()->route('products.index');
+    }
+
+    function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+
+        // Delete image file if it exists
+        if ($product->image && file_exists(public_path('images/' . $product->image))) {
+            unlink(public_path('images/' . $product->image));
+        }
+
+        $product->delete();
+
+        return redirect()->route('products.index');
     }
 }
