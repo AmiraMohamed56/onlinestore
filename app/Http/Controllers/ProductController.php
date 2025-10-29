@@ -4,103 +4,115 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\Category;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
     function index(Request $request)
     {
         // return "index works";
+        // $products = Product::when($search, function($query, $search){
+        //     $query->where('name', 'like', "%{$search}%")
+        //            ->orWhere('category', 'like', "%{$search}%");
+        // })->paginate(8);
+
         $search = $request->input('search');
-        $products = Product::when($search, function($query, $search){
-            $query->where('name', 'like', "%{$search}%")
-                   ->orWhere('category', 'like', "%{$search}%");
-        })->paginate(8);
+        $products = Product::with('category')
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                  ->orWhereHas('category', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                });
+            })->paginate(9);
+        
         return view('product.index', compact('products', 'search'));
     }
 
-     function create()
+   public function create()
     {
-        // return "create works";
-        return view('product.create');
+        $categories = Category::all();
+        return view('product.create', compact('categories'));
     }
 
-    function store(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:100',
-            'image' => 'nullable|image|max:2048',
-            'stock_quantity' => 'required|integer|min:0',
+            'name'            => 'required|string|max:100',
+            'description'     => 'required|string|max:500',
+            'price'           => 'required|numeric|min:0',
+            'category_id'     => 'required|exists:categories,id',
+            'stock_quantity'  => 'nullable|integer|min:0',
+            'is_active'       => 'boolean',
+            'image'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        if($request->hasFile('image'))
-        {
-            $filename = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move(public_path('images'), $filename);
-
-            // Save only the filename in DB
-            $validated['image'] = $filename;
+        if ($request->hasFile('image')) {
+            $validated['image'] = $this->uploadImage($request->file('image'));
         }
+
         $product = Product::create($validated);
 
         return redirect()->route('products.show', $product->id);
     }
 
-     function show($id)
+    public function show($id)
     {
-        // return "show works";
-       $product = Product::findorFail($id);
-       return view('product.show', compact('product'));
+        $product = Product::findOrFail($id);
+        return view('product.show', compact('product'));
     }
 
-    function edit(Product $product)
+    public function edit(Product $product)
     {
-        return view('product.edit', compact('product'));
+        $categories = Category::all();
+        return view('product.edit', compact('product', 'categories'));
     }
 
-    function update(Request $request, Product $product)
+    public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'price' => 'required|numeric|min:0',
-        'category' => 'required|string|max:100',
-        'image' => 'nullable|image|max:2048',
-        'stock_quantity' => 'required|integer|min:0',
+            'name'            => 'required|string|max:100',
+            'description'     => 'required|string|max:500',
+            'price'           => 'required|numeric|min:0',
+            'category_id'     => 'required|exists:categories,id',
+            'stock_quantity'  => 'nullable|integer|min:0',
+            'is_active'       => 'boolean',
+            'image'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        if ($request->hasFile('image')) 
-        {
-            // delete the old image
-            if ($product->image && file_exists(public_path('images/' . $product->image))) 
-                {
-                unlink(public_path('images/' . $product->image));
+        if ($request->hasFile('image')) {
+            // Delete old image from storage
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
             }
 
-            // Save the new image
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('images/'), $imageName);
-            $validated['image'] = $imageName;
+            // Upload new image
+            $validated['image'] = $this->uploadImage($request->file('image'));
         }
 
         $product->update($validated);
 
-        return redirect()->route('products.index');
+        return redirect()->route('products.show', $product->id);
     }
 
-    function destroy($id)
+    public function destroy($id)
     {
         $product = Product::findOrFail($id);
 
-        // Delete image file if it exists
-        if ($product->image && file_exists(public_path('images/' . $product->image))) {
-            unlink(public_path('images/' . $product->image));
+        if ($product->image && Storage::disk('public')->exists($product->image)) {
+            Storage::disk('public')->delete($product->image);
         }
 
         $product->delete();
 
         return redirect()->route('products.index');
+    }
+
+
+    private function uploadImage($imageObject)
+    {
+        $image_name = now()->format('Ymd_His') . '.' . $imageObject->getClientOriginalExtension();
+        $imageObject->storeAs('products', $image_name, 'public');
+        return "products/{$image_name}";
     }
 }

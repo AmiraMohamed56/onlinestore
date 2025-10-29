@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Product;
+use App\Models\Category;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
@@ -18,13 +19,14 @@ class ProductFactory extends Factory
     protected $model = Product::class;
     public function definition(): array
     {
-        $categories = ['Men', 'Women', 'Unisex'];
+        // $categories = ['Men', 'Women', 'Unisex'];
 
         return [
             'name' => $this->faker->words(3, true),
             'description' => $this->faker->sentence(12),
             'price' => $this->faker->randomFloat(2, 10, 999.99),
-            'category' => $this->faker->randomElement($categories),
+            // 'category' => $this->faker->randomElement($categories),
+            'category_id' => Category::inRandomOrder()->first()->id ?? Category::factory(),
             'image' => $this->faker->randomElement([
                 'perfume1.png',
                 'perfume2.png',

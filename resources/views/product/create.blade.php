@@ -1,75 +1,60 @@
 @extends('layouts.app')
 
-@section('main')
-<div class="max-w-2xl mx-auto mt-10 bg-gray-900/80 p-8 rounded-2xl shadow-lg border border-gray-800">
-    <h2 class="text-2xl font-bold text-white mb-6">➕ Add New Product</h2>
+@section('content')
+<div class="max-w-4xl mx-auto px-6 py-8">
 
-    @if ($errors->any())
-        <div class="mb-4 rounded-lg bg-red-500/20 border border-red-500 p-3 text-red-300 text-sm">
-            <strong>Whoops!</strong> There were some problems with your input.
-            <ul class="list-disc pl-5 mt-2 space-y-1">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    <h1 class="text-3xl font-bold text-pink-400 mb-6">Add New Product</h1>
 
-    <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+    <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data" class="space-y-5">
         @csrf
 
         <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Product Name</label>
-            <input type="text" name="name" value="{{ old('name') }}" required
-                class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 py-2 px-3 focus:ring-1 focus:ring-pink-500 focus:border-pink-500">
+            <label class="block text-gray-300 mb-2">Name</label>
+            <input type="text" name="name" value="{{ old('name') }}" class="w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 p-2" required>
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
-            <textarea name="description" rows="3" required
-                class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 py-2 px-3 focus:ring-1 focus:ring-pink-500 focus:border-pink-500">{{ old('description') }}</textarea>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Price ($)</label>
-                <input type="number" name="price" step="0.01" value="{{ old('price') }}" required
-                    class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 py-2 px-3 focus:ring-1 focus:ring-pink-500 focus:border-pink-500">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Category</label>
-                <select name="category" required
-                    class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 py-2 px-3 focus:ring-1 focus:ring-pink-500 focus:border-pink-500">
-                    <option value="men">Men</option>
-                    <option value="women">Women</option>
-                    <option value="unisex">Unisex</option>
-                </select>
-            </div>
+            <label class="block text-gray-300 mb-2">Description</label>
+            <textarea name="description" rows="3" class="w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 p-2" required>{{ old('description') }}</textarea>
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Stock quantity</label>
-            <input type="number" name="stock_quantity" step="0.01" value="{{ old('stock_quantity') }}" required
-                class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 py-2 px-3 focus:ring-1 focus:ring-pink-500 focus:border-pink-500">
+            <label class="block text-gray-300 mb-2">Price ($)</label>
+            <input type="number" step="0.01" name="price" value="{{ old('price') }}" class="w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 p-2" required>
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Product Image</label>
-            <input type="file" name="image" accept="image/*"
-                class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 
-                       file:rounded-md file:border-0 file:text-sm 
-                       file:font-semibold file:bg-pink-600 file:text-white hover:file:bg-pink-700">
+            <label class="block text-gray-300 mb-2">Category</label>
+            <select name="category_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 p-2" required>
+                <option value="">-- Select Category --</option>
+                @foreach ($categories as $category)
+                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
         </div>
 
-        <div class="flex justify-end gap-4">
-            <a href="{{ route('products.index') }}"
-                class="px-4 py-2 text-sm rounded-md bg-gray-700 text-gray-200 hover:bg-gray-600 transition">Cancel</a>
-            <button type="submit"
-                class="px-5 py-2 rounded-md bg-gradient-to-r from-pink-600 to-purple-600 text-white font-medium shadow-md hover:opacity-90 transition">
-                Save Product
-            </button>
+        <div>
+            <label class="block text-gray-300 mb-2">Stock Quantity</label>
+            <input type="number" name="stock_quantity" value="{{ old('stock_quantity') }}" class="w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-200 p-2">
         </div>
+
+        <div>
+            <label class="block text-gray-300 mb-2">Image</label>
+            <input type="file" name="image" class="w-full text-gray-200">
+        </div>
+
+        <div>
+            <label class="flex items-center space-x-2 text-gray-300">
+                <input type="checkbox" name="is_active" value="1" {{ old('is_active') ? 'checked' : '' }}>
+                <span>Active</span>
+            </label>
+        </div>
+
+        <button type="submit" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-lg shadow">
+            Create Product
+        </button>
     </form>
 </div>
 @endsection

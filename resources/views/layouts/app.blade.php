@@ -13,12 +13,10 @@
             <h1 class="text-3xl font-extrabold tracking-tight text-white">
                 🌸 Perfume Store
             </h1>
-            <!-- <nav class="flex space-x-6 text-gray-100 text-lg">
-                <a href="/" class="hover:text-yellow-300 transition">Home</a>
-                <a href="/products" class="hover:text-yellow-300 transition">Products</a>
-                <a href="/about" class="hover:text-yellow-300 transition">About</a>
-                <a href="/contact" class="hover:text-yellow-300 transition">Contact</a>
-            </nav> -->
+            <nav class="flex space-x-6 text-gray-100 text-lg">
+                <a href="{{ route('products.index') }}" class="hover:text-yellow-300 transition">Products</a>
+                <a href="{{ route('categories.index') }}" class="hover:text-yellow-300 transition">Categories</a>
+            </nav>
         </div>
     </header>
 
